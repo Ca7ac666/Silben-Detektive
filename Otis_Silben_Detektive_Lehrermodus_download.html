@@ -1,0 +1,1239 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Silben-Detektive mit Otis</title>
+<style>
+:root{--navy:#243653;--teal:#1d9876;--mint:#e5fbf2;--orange:#ffbd70;--peach:#fff0df;--purple:#8067c7;--sky:#e7f3ff;--pink:#ffe8ef;--yellow:#fff5c9}
+*{box-sizing:border-box}
+body{margin:0;padding:18px;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--navy);background:linear-gradient(135deg,#dff8ef,#e8efff 55%,#fff0d9);min-height:100vh}
+main{max-width:1120px;margin:auto}
+header{display:flex;align-items:center;gap:18px;padding:18px 22px;background:#ffffffeb;border:3px solid white;border-radius:28px;box-shadow:0 8px 24px #31476618}
+.mascot{font-size:66px;line-height:1;filter:drop-shadow(0 4px 2px #0002)}
+h1{margin:0;color:#35658a;font-size:clamp(26px,4vw,42px)}
+header p{margin:6px 0 0;font-size:17px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:16px 0 10px}
+.stat{background:white;border-radius:18px;padding:10px;text-align:center;box-shadow:0 4px 12px #31476612}
+.stat span{display:block;font-size:14px}.stat b{display:block;font-size:25px;color:#35658a}
+.progress{height:13px;background:#ffffffb8;border-radius:20px;overflow:hidden;margin:10px 0 16px}
+.bar{height:100%;width:0;background:linear-gradient(90deg,#4fc99a,#68b8ed);transition:width .25s}
+.notice{background:var(--yellow);border:2px dashed #e3bd50;border-radius:17px;padding:12px 16px;margin-bottom:15px;line-height:1.45}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:15px}
+.panel{background:#ffffffed;border:3px solid white;border-radius:23px;padding:15px;min-height:205px;box-shadow:0 5px 17px #31476612}
+.panel h2{margin:0 0 4px;font-size:21px}.panel p{margin:0 0 12px;color:#5c6d83;font-size:14px}
+.word-area{display:flex;flex-wrap:wrap;gap:9px;align-content:flex-start;min-height:110px}
+.word{border:0;border-radius:14px;padding:10px 14px;font-size:18px;font-weight:800;color:#263650;background:white;box-shadow:0 3px 0 #cbd6e3;cursor:grab;touch-action:manipulation;user-select:none}
+.word:hover{transform:translateY(-2px)}.word:focus-visible,.action:focus-visible{outline:4px solid #f0b83f;outline-offset:3px}
+.word.selected{outline:4px solid #f0b83f;background:#fff6d6}
+.word.done{background:#dff8eb;color:#146b4d;cursor:default;box-shadow:none}
+.drop{background:var(--mint);border:3px dashed #70c9a7;transition:background .15s,transform .15s}
+.drop.closed{background:var(--peach);border-color:#efb26d}
+.drop.over{background:#c9f3df;transform:scale(1.01)}.drop.closed.over{background:#ffe0bd}
+.drop .word-area{min-height:120px}
+.tip-panel{background:var(--sky)}
+.tip-visual{text-align:center;font-size:43px;margin:12px 0 0}
+.feedback{margin:15px 0 0;padding:13px 16px;border-radius:17px;background:white;min-height:54px;text-align:center;font-size:17px;font-weight:750;box-shadow:0 4px 12px #31476610}
+.feedback.good{background:#dff8eb;color:#126748}.feedback.bad{background:var(--pink);color:#a32c4a}
+.actions{display:flex;justify-content:center;gap:11px;flex-wrap:wrap;margin:15px 0}
+.action{border:0;border-radius:999px;padding:12px 20px;font-size:16px;font-weight:800;cursor:pointer;background:#35658a;color:white;box-shadow:0 4px 0 #264c6a}
+.action.light{background:white;color:#35658a;box-shadow:0 4px 0 #cad8e7}
+.action:active{transform:translateY(3px);box-shadow:none}
+.result{display:none;margin:18px 0;padding:22px;background:#fff;border:3px solid white;border-radius:25px;text-align:center;box-shadow:0 8px 24px #31476618}
+.result .trophy{font-size:55px}.result h2{color:#16845d;font-size:29px;margin:6px 0}.result p{font-size:17px}
+footer{text-align:center;color:#65758a;font-size:13px;margin:18px 0 4px}
+@media(max-width:720px){body{padding:10px}.grid{grid-template-columns:1fr}.mascot{font-size:52px}.stats{gap:7px}.stat{padding:8px 3px}.word{font-size:17px;padding:9px 12px}header{padding:14px}}
+
+.teacher-toggle{display:block;margin:18px auto 10px;background:#8067c7;box-shadow:0 4px 0 #604ca5}
+.teacher-panel{margin:12px 0 20px;padding:18px;background:#fff;border:3px solid #d9d0f5;border-radius:23px;box-shadow:0 5px 17px #31476612}
+.teacher-panel[hidden]{display:none}
+.teacher-panel h2{margin:0 0 6px;color:#604ca5}
+.teacher-intro{margin:0 0 14px;color:#5c6d83;font-size:14px}
+.teacher-form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.teacher-form label{display:flex;flex-direction:column;gap:5px;font-weight:750;font-size:14px}
+.teacher-form input,.teacher-form select,.teacher-form textarea{width:100%;padding:10px 12px;border:2px solid #d8deea;border-radius:11px;font:inherit;color:var(--navy);background:#fff}
+.teacher-form textarea{min-height:66px;resize:vertical;grid-column:1/-1}
+.teacher-form .wide{grid-column:1/-1}
+.teacher-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:12px}
+.teacher-list{display:grid;gap:8px;margin-top:15px}
+.teacher-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;background:#f5f7fc;border-radius:12px}
+.teacher-word{font-weight:800}.teacher-meta{color:#64748b;font-size:13px}
+.teacher-row-actions{display:flex;gap:6px;flex-shrink:0}
+.teacher-row-actions button{border:0;border-radius:9px;padding:7px 10px;font-weight:750;cursor:pointer;background:#e4e9f5;color:#314766}
+.teacher-row-actions button.delete{background:#ffe5eb;color:#a32c4a}
+.teacher-count{font-weight:800;color:#604ca5;margin-top:12px}
+.teacher-message{min-height:22px;margin-top:8px;font-weight:700;color:#146b4d}
+@media(max-width:600px){.teacher-form{grid-template-columns:1fr}.teacher-form textarea,.teacher-form .wide{grid-column:auto}.teacher-row{align-items:flex-start}.teacher-row-actions{flex-direction:column}}
+
+</style>
+</head>
+<body>
+<main>
+<header>
+  <div class="mascot" aria-hidden="true">🦦</div>
+  <div><h1>Silben-Detektive</h1><p>Otis braucht deine Hilfe! Finde heraus, wie die <strong>erste Silbe</strong> endet.</p></div>
+</header>
+
+<section class="stats" aria-label="Spielstand">
+  <div class="stat"><span>⭐ Punkte</span><b id="score">0</b></div>
+  <div class="stat"><span>🔎 Wörter</span><b id="progressText">0 / 24</b></div>
+  <div class="stat"><span>💡 Fehler</span><b id="mistakes">0</b></div>
+</section>
+<div class="progress" aria-label="Fortschritt"><div class="bar" id="bar"></div></div>
+
+<div class="notice"><strong>So geht's:</strong> Ziehe jedes Wort in das passende Feld. Auf Tablet und Handy kannst du ein Wort antippen und danach das Feld auswählen. Achte auf die erste Silbe!</div>
+
+<div class="grid">
+  <section class="panel">
+    <h2>🧺 Wortkörbchen</h2><p>Diese Wörter warten auf dich.</p>
+    <div class="word-area" id="wordPool"></div>
+  </section>
+  <section class="panel tip-panel">
+    <h2>🦦 Otis' Detektiv-Tipp</h2>
+    <p>Sprich das Wort langsam in Silben. Höre genau hin: Endet die erste Silbe mit einem Selbstlaut oder einem Mitlaut?</p>
+    <p><strong>In Otis' Wörterbuch:</strong> <span id="bankCount">viele</span> Wörter aus verschiedenen Wortarten warten auf dich.</p>
+    <div class="tip-visual">🕵️ 🔍 🐾</div>
+  </section>
+  <section class="panel drop" data-kind="open" tabindex="0" role="group" aria-label="Offene Silbe: hier ablegen">
+    <h2>🟢 Offene Silbe</h2><p>Die erste Silbe endet mit einem Selbstlaut (a, e, i, o, u, ä, ö, ü oder Zwielaut).</p>
+    <div class="word-area" id="openZone"></div>
+  </section>
+  <section class="panel drop closed" data-kind="closed" tabindex="0" role="group" aria-label="Geschlossene Silbe: hier ablegen">
+    <h2>🟠 Geschlossene Silbe</h2><p>Die erste Silbe endet mit einem Mitlaut.</p>
+    <div class="word-area" id="closedZone"></div>
+  </section>
+</div>
+
+<div class="feedback" id="feedback" role="status" aria-live="polite">Los geht's! Otis drückt dir die Pfoten. 🐾</div>
+<div class="actions">
+  <button class="action light" id="hintBtn">💡 Tipp anzeigen</button>
+  <button class="action light" id="restartBtn">↻ Runde neu mischen</button>
+</div>
+
+<section class="result" id="result">
+  <div class="trophy">🏆🦦🎉</div>
+  <h2>Fall gelöst!</h2>
+  <p id="resultText"></p>
+  <button class="action" id="newRoundBtn">🎲 Neue Runde starten</button>
+</section>
+
+<button class="action teacher-toggle" id="teacherToggle" type="button" aria-expanded="false" aria-controls="teacherPanel">🧑‍🏫 Lehrermodus öffnen</button>
+<section class="teacher-panel" id="teacherPanel" hidden>
+  <h2>🧑‍🏫 Otis' Wörterwerkstatt</h2>
+  <p class="teacher-intro">Hier kannst du eigene Wörter ergänzen, vorhandene Wörter bearbeiten oder aus der Wortbank löschen. Deine Änderungen bleiben auf diesem Gerät im Browser gespeichert.</p>
+  <form id="teacherForm" class="teacher-form">
+    <label>Wort
+      <input id="teacherWord" type="text" maxlength="40" placeholder="z. B. Wolke" required>
+    </label>
+    <label>Silbenart der ersten Silbe
+      <select id="teacherKind"><option value="open">Offene Silbe</option><option value="closed">Geschlossene Silbe</option></select>
+    </label>
+    <label>Wortart
+      <select id="teacherCategory"><option>Nomen</option><option>Verb</option><option>Adjektiv</option><option>Adverb</option><option>Pronomen</option><option>Artikel</option><option>Präposition</option><option>Konjunktion</option><option>Zahlwort</option><option>Sonstiges</option></select>
+    </label>
+    <label class="wide">Erklärung / Silbentrennung
+      <textarea id="teacherTip" placeholder="z. B. Wol-ke: Die erste Silbe endet mit l." required></textarea>
+    </label>
+    <div class="teacher-actions wide">
+      <button class="action" id="teacherSave" type="submit">➕ Wort hinzufügen</button>
+      <button class="action light" id="teacherCancel" type="button" hidden>Abbrechen</button>
+      <button class="action light" id="teacherExport" type="button">⬇ Wortbank sichern</button>
+      <button class="action light" id="teacherReset" type="button">↺ Ausgangswortbank laden</button>
+    </div>
+  </form>
+  <div class="teacher-count" id="teacherCount"></div>
+  <div class="teacher-list" id="teacherWords" aria-live="polite"></div>
+  <div class="teacher-message" id="teacherMessage" role="status"></div>
+</section>
+
+<footer>Silben-Detektive mit Otis · Lernspiel für die 4. Klasse</footer>
+</main>
+
+<script>
+/*
+  Wortbank: Jede Karte enthält die Einteilung nach dem Ende der ersten Silbe.
+  Für jede neue Runde werden 24 Wörter möglichst ausgewogen und ohne Wiederholung
+  innerhalb der Runde zusammengestellt.
+*/
+const DEFAULT_WORD_BANK = [
+  [
+    "Hose",
+    "open",
+    "Ho-se: Die erste Silbe endet mit o.",
+    "Nomen"
+  ],
+  [
+    "Blume",
+    "open",
+    "Blu-me: Die erste Silbe endet mit u.",
+    "Nomen"
+  ],
+  [
+    "Tafel",
+    "open",
+    "Ta-fel: Die erste Silbe endet mit a.",
+    "Nomen"
+  ],
+  [
+    "Löwe",
+    "open",
+    "Lö-we: Die erste Silbe endet mit ö.",
+    "Nomen"
+  ],
+  [
+    "Nase",
+    "open",
+    "Na-se: Die erste Silbe endet mit a.",
+    "Nomen"
+  ],
+  [
+    "Rose",
+    "open",
+    "Ro-se: Die erste Silbe endet mit o.",
+    "Nomen"
+  ],
+  [
+    "Dose",
+    "open",
+    "Do-se: Die erste Silbe endet mit o.",
+    "Nomen"
+  ],
+  [
+    "Blase",
+    "open",
+    "Bla-se: Die erste Silbe endet mit a.",
+    "Nomen"
+  ],
+  [
+    "Käse",
+    "open",
+    "Kä-se: Die erste Silbe endet mit ä.",
+    "Nomen"
+  ],
+  [
+    "Schule",
+    "open",
+    "Schu-le: Die erste Silbe endet mit u.",
+    "Nomen"
+  ],
+  [
+    "Tasche",
+    "open",
+    "Ta-sche: Die erste Silbe endet mit a.",
+    "Nomen"
+  ],
+  [
+    "Feder",
+    "open",
+    "Fe-der: Die erste Silbe endet mit e.",
+    "Nomen"
+  ],
+  [
+    "Hafen",
+    "open",
+    "Ha-fen: Die erste Silbe endet mit a.",
+    "Nomen"
+  ],
+  [
+    "Regen",
+    "open",
+    "Re-gen: Die erste Silbe endet mit e.",
+    "Nomen"
+  ],
+  [
+    "König",
+    "open",
+    "Kö-nig: Die erste Silbe endet mit ö.",
+    "Nomen"
+  ],
+  [
+    "Eimer",
+    "open",
+    "Ei-mer: Die erste Silbe endet mit dem Selbstlaut ei.",
+    "Nomen"
+  ],
+  [
+    "Auto",
+    "open",
+    "Au-to: Die erste Silbe endet mit dem Selbstlaut au.",
+    "Nomen"
+  ],
+  [
+    "Auge",
+    "open",
+    "Au-ge: Die erste Silbe endet mit dem Selbstlaut au.",
+    "Nomen"
+  ],
+  [
+    "Eule",
+    "open",
+    "Eu-le: Die erste Silbe endet mit dem Selbstlaut eu.",
+    "Nomen"
+  ],
+  [
+    "Kamera",
+    "open",
+    "Ka-me-ra: Die erste Silbe endet mit a.",
+    "Nomen"
+  ],
+  [
+    "Tomate",
+    "open",
+    "To-ma-te: Die erste Silbe endet mit o.",
+    "Nomen"
+  ],
+  [
+    "Banane",
+    "open",
+    "Ba-na-ne: Die erste Silbe endet mit a.",
+    "Nomen"
+  ],
+  [
+    "Papier",
+    "open",
+    "Pa-pier: Die erste Silbe endet mit a.",
+    "Nomen"
+  ],
+  [
+    "Rakete",
+    "open",
+    "Ra-ke-te: Die erste Silbe endet mit a.",
+    "Nomen"
+  ],
+  [
+    "Melone",
+    "open",
+    "Me-lo-ne: Die erste Silbe endet mit e.",
+    "Nomen"
+  ],
+  [
+    "Zitrone",
+    "open",
+    "Zi-tro-ne: Die erste Silbe endet mit i.",
+    "Nomen"
+  ],
+  [
+    "Salat",
+    "open",
+    "Sa-lat: Die erste Silbe endet mit a.",
+    "Nomen"
+  ],
+  [
+    "Musik",
+    "open",
+    "Mu-sik: Die erste Silbe endet mit u.",
+    "Nomen"
+  ],
+  [
+    "Ferien",
+    "open",
+    "Fe-ri-en: Die erste Silbe endet mit e.",
+    "Nomen"
+  ],
+  [
+    "Radio",
+    "open",
+    "Ra-di-o: Die erste Silbe endet mit a.",
+    "Nomen"
+  ],
+  [
+    "Roboter",
+    "open",
+    "Ro-bo-ter: Die erste Silbe endet mit o.",
+    "Nomen"
+  ],
+  [
+    "Lokomotive",
+    "open",
+    "Lo-ko-mo-ti-ve: Die erste Silbe endet mit o.",
+    "Nomen"
+  ],
+  [
+    "malen",
+    "open",
+    "Ma-len: Die erste Silbe endet mit a.",
+    "Verb"
+  ],
+  [
+    "laufen",
+    "open",
+    "Lau-fen: Die erste Silbe endet mit dem Selbstlaut au.",
+    "Verb"
+  ],
+  [
+    "rufen",
+    "open",
+    "Ru-fen: Die erste Silbe endet mit u.",
+    "Verb"
+  ],
+  [
+    "baden",
+    "open",
+    "Ba-den: Die erste Silbe endet mit a.",
+    "Verb"
+  ],
+  [
+    "lesen",
+    "open",
+    "Le-sen: Die erste Silbe endet mit e.",
+    "Verb"
+  ],
+  [
+    "spielen",
+    "open",
+    "Spie-len: Die erste Silbe endet mit dem Selbstlaut ie.",
+    "Verb"
+  ],
+  [
+    "zeigen",
+    "open",
+    "Zei-gen: Die erste Silbe endet mit dem Selbstlaut ei.",
+    "Verb"
+  ],
+  [
+    "kaufen",
+    "open",
+    "Kau-fen: Die erste Silbe endet mit dem Selbstlaut au.",
+    "Verb"
+  ],
+  [
+    "träumen",
+    "open",
+    "Träu-men: Die erste Silbe endet mit dem Selbstlaut äu.",
+    "Verb"
+  ],
+  [
+    "freuen",
+    "open",
+    "Freu-en: Die erste Silbe endet mit dem Selbstlaut eu.",
+    "Verb"
+  ],
+  [
+    "gehen",
+    "open",
+    "Ge-hen: Die erste Silbe endet mit e.",
+    "Verb"
+  ],
+  [
+    "sagen",
+    "open",
+    "Sa-gen: Die erste Silbe endet mit a.",
+    "Verb"
+  ],
+  [
+    "fragen",
+    "open",
+    "Fra-gen: Die erste Silbe endet mit a.",
+    "Verb"
+  ],
+  [
+    "holen",
+    "open",
+    "Ho-len: Die erste Silbe endet mit o.",
+    "Verb"
+  ],
+  [
+    "leben",
+    "open",
+    "Le-ben: Die erste Silbe endet mit e.",
+    "Verb"
+  ],
+  [
+    "üben",
+    "open",
+    "Ü-ben: Die erste Silbe endet mit ü.",
+    "Verb"
+  ],
+  [
+    "leise",
+    "open",
+    "Lei-se: Die erste Silbe endet mit dem Selbstlaut ei.",
+    "Adjektiv"
+  ],
+  [
+    "heute",
+    "open",
+    "Heu-te: Die erste Silbe endet mit dem Selbstlaut eu.",
+    "Adverb"
+  ],
+  [
+    "böse",
+    "open",
+    "Bö-se: Die erste Silbe endet mit ö.",
+    "Adjektiv"
+  ],
+  [
+    "oben",
+    "open",
+    "O-ben: Die erste Silbe endet mit o.",
+    "Adverb"
+  ],
+  [
+    "neben",
+    "open",
+    "Ne-ben: Die erste Silbe endet mit e.",
+    "Adverb"
+  ],
+  [
+    "müde",
+    "open",
+    "Mü-de: Die erste Silbe endet mit ü.",
+    "Adjektiv"
+  ],
+  [
+    "sauber",
+    "open",
+    "Sau-ber: Die erste Silbe endet mit dem Selbstlaut au.",
+    "Adjektiv"
+  ],
+  [
+    "teuer",
+    "open",
+    "Teu-er: Die erste Silbe endet mit dem Selbstlaut eu.",
+    "Adjektiv"
+  ],
+  [
+    "traurig",
+    "open",
+    "Trau-rig: Die erste Silbe endet mit dem Selbstlaut au.",
+    "Adjektiv"
+  ],
+  [
+    "mutig",
+    "open",
+    "Mu-tig: Die erste Silbe endet mit u.",
+    "Adjektiv"
+  ],
+  [
+    "danach",
+    "open",
+    "Da-nach: Die erste Silbe endet mit a.",
+    "Adverb"
+  ],
+  [
+    "darum",
+    "open",
+    "Da-rum: Die erste Silbe endet mit a.",
+    "Adverb"
+  ],
+  [
+    "zuhause",
+    "open",
+    "Zu-hau-se: Die erste Silbe endet mit u.",
+    "Adverb"
+  ],
+  [
+    "gemeinsam",
+    "open",
+    "Ge-mein-sam: Die erste Silbe endet mit e.",
+    "Adverb"
+  ],
+  [
+    "Sonne",
+    "closed",
+    "Son-ne: Die erste Silbe endet mit n.",
+    "Nomen"
+  ],
+  [
+    "Lampe",
+    "closed",
+    "Lam-pe: Die erste Silbe endet mit m.",
+    "Nomen"
+  ],
+  [
+    "Ratte",
+    "closed",
+    "Rat-te: Die erste Silbe endet mit t.",
+    "Nomen"
+  ],
+  [
+    "Tasse",
+    "closed",
+    "Tas-se: Die erste Silbe endet mit s.",
+    "Nomen"
+  ],
+  [
+    "Kanne",
+    "closed",
+    "Kan-ne: Die erste Silbe endet mit n.",
+    "Nomen"
+  ],
+  [
+    "Mutter",
+    "closed",
+    "Mut-ter: Die erste Silbe endet mit t.",
+    "Nomen"
+  ],
+  [
+    "Fenster",
+    "closed",
+    "Fens-ter: Die erste Silbe endet mit n.",
+    "Nomen"
+  ],
+  [
+    "Kiste",
+    "closed",
+    "Kis-te: Die erste Silbe endet mit s.",
+    "Nomen"
+  ],
+  [
+    "Wolke",
+    "closed",
+    "Wol-ke: Die erste Silbe endet mit l.",
+    "Nomen"
+  ],
+  [
+    "Kissen",
+    "closed",
+    "Kis-sen: Die erste Silbe endet mit s.",
+    "Nomen"
+  ],
+  [
+    "Garten",
+    "closed",
+    "Gar-ten: Die erste Silbe endet mit r.",
+    "Nomen"
+  ],
+  [
+    "Kinder",
+    "closed",
+    "Kin-der: Die erste Silbe endet mit n.",
+    "Nomen"
+  ],
+  [
+    "Eltern",
+    "closed",
+    "El-tern: Die erste Silbe endet mit l.",
+    "Nomen"
+  ],
+  [
+    "Äpfel",
+    "closed",
+    "Äp-fel: Die erste Silbe endet mit p.",
+    "Nomen"
+  ],
+  [
+    "Apfel",
+    "closed",
+    "Ap-fel: Die erste Silbe endet mit p.",
+    "Nomen"
+  ],
+  [
+    "Zimmer",
+    "closed",
+    "Zim-mer: Die erste Silbe endet mit m.",
+    "Nomen"
+  ],
+  [
+    "Hammer",
+    "closed",
+    "Ham-mer: Die erste Silbe endet mit m.",
+    "Nomen"
+  ],
+  [
+    "Sommer",
+    "closed",
+    "Som-mer: Die erste Silbe endet mit m.",
+    "Nomen"
+  ],
+  [
+    "Winter",
+    "closed",
+    "Win-ter: Die erste Silbe endet mit n.",
+    "Nomen"
+  ],
+  [
+    "Fische",
+    "closed",
+    "Fisch-e: Die erste Silbe endet mit sch.",
+    "Nomen"
+  ],
+  [
+    "Katze",
+    "closed",
+    "Kat-ze: Die erste Silbe endet mit t.",
+    "Nomen"
+  ],
+  [
+    "Hunde",
+    "closed",
+    "Hun-de: Die erste Silbe endet mit n.",
+    "Nomen"
+  ],
+  [
+    "Ente",
+    "closed",
+    "En-te: Die erste Silbe endet mit n.",
+    "Nomen"
+  ],
+  [
+    "Engel",
+    "closed",
+    "En-gel: Die erste Silbe endet mit n.",
+    "Nomen"
+  ],
+  [
+    "Onkel",
+    "closed",
+    "On-kel: Die erste Silbe endet mit n.",
+    "Nomen"
+  ],
+  [
+    "Insel",
+    "closed",
+    "In-sel: Die erste Silbe endet mit n.",
+    "Nomen"
+  ],
+  [
+    "Kerze",
+    "closed",
+    "Ker-ze: Die erste Silbe endet mit r.",
+    "Nomen"
+  ],
+  [
+    "Kürbis",
+    "closed",
+    "Kür-bis: Die erste Silbe endet mit r.",
+    "Nomen"
+  ],
+  [
+    "Pinsel",
+    "closed",
+    "Pin-sel: Die erste Silbe endet mit n.",
+    "Nomen"
+  ],
+  [
+    "Gabel",
+    "closed",
+    "Ga-bel: Die erste Silbe endet mit a.",
+    "Nomen"
+  ],
+  [
+    "singen",
+    "closed",
+    "Sin-gen: Die erste Silbe endet mit n.",
+    "Verb"
+  ],
+  [
+    "rechnen",
+    "closed",
+    "Rech-nen: Die erste Silbe endet mit ch.",
+    "Verb"
+  ],
+  [
+    "tanzen",
+    "closed",
+    "Tan-zen: Die erste Silbe endet mit n.",
+    "Verb"
+  ],
+  [
+    "winken",
+    "closed",
+    "Win-ken: Die erste Silbe endet mit n.",
+    "Verb"
+  ],
+  [
+    "helfen",
+    "closed",
+    "Hel-fen: Die erste Silbe endet mit l.",
+    "Verb"
+  ],
+  [
+    "finden",
+    "closed",
+    "Fin-den: Die erste Silbe endet mit n.",
+    "Verb"
+  ],
+  [
+    "trinken",
+    "closed",
+    "Trin-ken: Die erste Silbe endet mit n.",
+    "Verb"
+  ],
+  [
+    "denken",
+    "closed",
+    "Den-ken: Die erste Silbe endet mit n.",
+    "Verb"
+  ],
+  [
+    "bringen",
+    "closed",
+    "Brin-gen: Die erste Silbe endet mit n.",
+    "Verb"
+  ],
+  [
+    "halten",
+    "closed",
+    "Hal-ten: Die erste Silbe endet mit l.",
+    "Verb"
+  ],
+  [
+    "fallen",
+    "closed",
+    "Fal-len: Die erste Silbe endet mit l.",
+    "Verb"
+  ],
+  [
+    "werfen",
+    "closed",
+    "Wer-fen: Die erste Silbe endet mit r.",
+    "Verb"
+  ],
+  [
+    "werden",
+    "closed",
+    "Wer-den: Die erste Silbe endet mit r.",
+    "Verb"
+  ],
+  [
+    "kommen",
+    "closed",
+    "Kom-men: Die erste Silbe endet mit m.",
+    "Verb"
+  ],
+  [
+    "sitzen",
+    "closed",
+    "Sit-zen: Die erste Silbe endet mit t.",
+    "Verb"
+  ],
+  [
+    "setzen",
+    "closed",
+    "Set-zen: Die erste Silbe endet mit t.",
+    "Verb"
+  ],
+  [
+    "putzen",
+    "closed",
+    "Put-zen: Die erste Silbe endet mit t.",
+    "Verb"
+  ],
+  [
+    "öffnen",
+    "closed",
+    "Öff-nen: Die erste Silbe endet mit f.",
+    "Verb"
+  ],
+  [
+    "zeichnen",
+    "closed",
+    "Zeich-nen: Die erste Silbe endet mit ch.",
+    "Verb"
+  ],
+  [
+    "wachsen",
+    "closed",
+    "Wach-sen: Die erste Silbe endet mit ch.",
+    "Verb"
+  ],
+  [
+    "wechseln",
+    "closed",
+    "Wech-seln: Die erste Silbe endet mit ch.",
+    "Verb"
+  ],
+  [
+    "sammeln",
+    "closed",
+    "Sam-meln: Die erste Silbe endet mit m.",
+    "Verb"
+  ],
+  [
+    "klettern",
+    "closed",
+    "Klet-tern: Die erste Silbe endet mit t.",
+    "Verb"
+  ],
+  [
+    "flüstern",
+    "closed",
+    "Flüs-tern: Die erste Silbe endet mit s.",
+    "Verb"
+  ],
+  [
+    "basteln",
+    "closed",
+    "Bas-teln: Die erste Silbe endet mit s.",
+    "Verb"
+  ],
+  [
+    "turnen",
+    "closed",
+    "Tur-nen: Die erste Silbe endet mit r.",
+    "Verb"
+  ],
+  [
+    "wandern",
+    "closed",
+    "Wan-dern: Die erste Silbe endet mit n.",
+    "Verb"
+  ],
+  [
+    "dunkel",
+    "closed",
+    "Dun-kel: Die erste Silbe endet mit n.",
+    "Adjektiv"
+  ],
+  [
+    "buntes",
+    "closed",
+    "Bun-tes: Die erste Silbe endet mit n.",
+    "Adjektiv"
+  ],
+  [
+    "munter",
+    "closed",
+    "Mun-ter: Die erste Silbe endet mit n.",
+    "Adjektiv"
+  ],
+  [
+    "lustig",
+    "closed",
+    "Lus-tig: Die erste Silbe endet mit s.",
+    "Adjektiv"
+  ],
+  [
+    "freundlich",
+    "closed",
+    "Freund-lich: Die erste Silbe endet mit d.",
+    "Adjektiv"
+  ],
+  [
+    "langsam",
+    "closed",
+    "Lang-sam: Die erste Silbe endet mit ng.",
+    "Adjektiv"
+  ],
+  [
+    "windig",
+    "closed",
+    "Win-dig: Die erste Silbe endet mit n.",
+    "Adjektiv"
+  ],
+  [
+    "sonnig",
+    "closed",
+    "Son-nig: Die erste Silbe endet mit n.",
+    "Adjektiv"
+  ],
+  [
+    "heller",
+    "closed",
+    "Hel-ler: Die erste Silbe endet mit l.",
+    "Adjektiv"
+  ],
+  [
+    "saftig",
+    "closed",
+    "Saf-tig: Die erste Silbe endet mit f.",
+    "Adjektiv"
+  ],
+  [
+    "gestern",
+    "closed",
+    "Ges-tern: Die erste Silbe endet mit s.",
+    "Adverb"
+  ],
+  [
+    "immer",
+    "closed",
+    "Im-mer: Die erste Silbe endet mit m.",
+    "Adverb"
+  ],
+  [
+    "vorher",
+    "closed",
+    "Vor-her: Die erste Silbe endet mit r.",
+    "Adverb"
+  ],
+  [
+    "hinten",
+    "closed",
+    "Hin-ten: Die erste Silbe endet mit n.",
+    "Adverb"
+  ],
+  [
+    "vorne",
+    "closed",
+    "Vor-ne: Die erste Silbe endet mit r.",
+    "Adverb"
+  ]
+];
+
+// Die bearbeitete Wortbank wird lokal im Browser gespeichert.
+let WORD_BANK = loadWordBank();
+function loadWordBank() {
+  try {
+    const saved = localStorage.getItem("otisSilbenWortbankV2");
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (Array.isArray(parsed) && parsed.every(w => Array.isArray(w) && w.length >= 4)) return parsed;
+    }
+  } catch (error) { console.warn("Gespeicherte Wortbank konnte nicht geladen werden.", error); }
+  return DEFAULT_WORD_BANK.map(w => [...w]);
+}
+function saveWordBank() {
+  try { localStorage.setItem("otisSilbenWortbankV2", JSON.stringify(WORD_BANK)); }
+  catch (error) { alert("Die Wortbank konnte nicht im Browser gespeichert werden. Bitte prüfe die Speichereinstellungen."); }
+}
+
+const ROUND_SIZE = 24;
+let roundWords = [];
+let score = 0, mistakes = 0, completed = 0, selectedWord = null;
+let previousRoundWords = "";
+
+const el = id => document.getElementById(id);
+function updateBankCounts() {
+  el("bankCount").textContent = WORD_BANK.length;
+  const openCount = WORD_BANK.filter(w => w[1] === "open").length;
+  const closedCount = WORD_BANK.filter(w => w[1] === "closed").length;
+  el("teacherCount").textContent = `${WORD_BANK.length} Wörter insgesamt · ${openCount} offene · ${closedCount} geschlossene Silben`;
+}
+let editingWord = null;
+function countVowelGroups(word) {
+  return (word.toLocaleLowerCase("de").match(/au|ei|eu|äu|ie|[aeiouyäöü]/g) || []).length;
+}
+function renderTeacherWords() {
+  const list = el("teacherWords");
+  list.innerHTML = "";
+  WORD_BANK.forEach((item, index) => {
+    const row = document.createElement("div");
+    row.className = "teacher-row";
+    const info = document.createElement("div");
+    const word = document.createElement("div");
+    word.className = "teacher-word";
+    word.textContent = item[0];
+    const meta = document.createElement("div");
+    meta.className = "teacher-meta";
+    meta.textContent = `${item[1] === "open" ? "Offen" : "Geschlossen"} · ${item[3] || "Sonstiges"}`;
+    info.append(word, meta);
+    const actions = document.createElement("div");
+    actions.className = "teacher-row-actions";
+    const edit = document.createElement("button");
+    edit.type = "button"; edit.textContent = "✏️ Bearbeiten";
+    edit.addEventListener("click", () => beginEdit(index));
+    const remove = document.createElement("button");
+    remove.type = "button"; remove.className = "delete"; remove.textContent = "🗑 Löschen";
+    remove.addEventListener("click", () => {
+      if (!confirm(`Möchtest du das Wort „${item[0]}“ wirklich löschen?`)) return;
+      WORD_BANK.splice(index, 1); saveWordBank(); updateBankCounts(); renderTeacherWords();
+      el("teacherMessage").textContent = `„${item[0]}“ wurde gelöscht.`;
+      if (editingWord === item[0]) resetTeacherForm();
+    });
+    actions.append(edit, remove); row.append(info, actions); list.appendChild(row);
+  });
+  updateBankCounts();
+}
+function resetTeacherForm() {
+  editingWord = null;
+  el("teacherForm").reset();
+  el("teacherSave").textContent = "➕ Wort hinzufügen";
+  el("teacherCancel").hidden = true;
+}
+function beginEdit(index) {
+  const item = WORD_BANK[index];
+  editingWord = item[0];
+  el("teacherWord").value = item[0];
+  el("teacherKind").value = item[1];
+  el("teacherTip").value = item[2];
+  el("teacherCategory").value = item[3] || "Sonstiges";
+  el("teacherSave").textContent = "💾 Änderungen speichern";
+  el("teacherCancel").hidden = false;
+  el("teacherWord").focus();
+  el("teacherMessage").textContent = `Du bearbeitest gerade „${item[0]}“.`;
+}
+function initTeacherMode() {
+  el("teacherToggle").addEventListener("click", () => {
+    const opening = el("teacherPanel").hidden;
+    el("teacherPanel").hidden = !opening;
+    el("teacherToggle").setAttribute("aria-expanded", String(opening));
+    el("teacherToggle").textContent = opening ? "🧑‍🏫 Lehrermodus schließen" : "🧑‍🏫 Lehrermodus öffnen";
+    if (opening) { renderTeacherWords(); el("teacherPanel").scrollIntoView({behavior:"smooth", block:"start"}); }
+  });
+  el("teacherForm").addEventListener("submit", event => {
+    event.preventDefault();
+    const word = el("teacherWord").value.trim();
+    const kind = el("teacherKind").value;
+    const category = el("teacherCategory").value;
+    const tip = el("teacherTip").value.trim();
+    if (countVowelGroups(word) < 2) {
+      el("teacherMessage").textContent = "Bitte gib ein mehrsilbiges Wort mit mindestens zwei Silben ein.";
+      el("teacherWord").focus(); return;
+    }
+    const duplicate = WORD_BANK.findIndex(w => w[0].toLocaleLowerCase("de") === word.toLocaleLowerCase("de"));
+    if (duplicate >= 0 && WORD_BANK[duplicate][0] !== editingWord) {
+      el("teacherMessage").textContent = "Dieses Wort ist bereits in der Wortbank enthalten.";
+      el("teacherWord").focus(); return;
+    }
+    const entry = [word, kind, tip, category];
+    if (editingWord !== null) {
+      const index = WORD_BANK.findIndex(w => w[0] === editingWord);
+      if (index >= 0) WORD_BANK[index] = entry;
+      el("teacherMessage").textContent = `„${word}“ wurde aktualisiert.`;
+    } else {
+      WORD_BANK.push(entry);
+      el("teacherMessage").textContent = `„${word}“ wurde zur Wortbank hinzugefügt.`;
+    }
+    saveWordBank(); resetTeacherForm(); renderTeacherWords();
+  });
+  el("teacherCancel").addEventListener("click", resetTeacherForm);
+  el("teacherReset").addEventListener("click", () => {
+    if (!confirm("Möchtest du wirklich deine Änderungen verwerfen und die ursprüngliche Wortbank wiederherstellen?")) return;
+    WORD_BANK = DEFAULT_WORD_BANK.map(w => [...w]);
+    saveWordBank(); resetTeacherForm(); renderTeacherWords();
+    el("teacherMessage").textContent = "Die ursprüngliche Wortbank wurde wiederhergestellt.";
+  });
+  el("teacherExport").addEventListener("click", () => {
+    const blob = new Blob([JSON.stringify(WORD_BANK, null, 2)], {type:"application/json"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href = url; a.download = "Otis-Wortbank.json";
+    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    el("teacherMessage").textContent = "Deine Wortbank wurde als JSON-Datei exportiert.";
+  });
+  renderTeacherWords();
+}
+updateBankCounts();
+initTeacherMode();
+function shuffle(items) {
+  const a = [...items];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+function setFeedback(message, type="") {
+  el("feedback").textContent = message;
+  el("feedback").className = "feedback" + (type ? " " + type : "");
+}
+function updateStats() {
+  el("score").textContent = score;
+  el("progressText").textContent = `${completed} / ${ROUND_SIZE}`;
+  el("mistakes").textContent = mistakes;
+  el("bar").style.width = `${completed / ROUND_SIZE * 100}%`;
+}
+function makeRound() {
+  // Pro Runde genau 12 offene und 12 geschlossene Silben.
+  // Wörter aus der direkten Vorrunde werden nach Möglichkeit vermieden.
+  const openAvailable = WORD_BANK.filter(w => w[1] === "open").length;
+  const closedAvailable = WORD_BANK.filter(w => w[1] === "closed").length;
+  if (openAvailable < ROUND_SIZE / 2 || closedAvailable < ROUND_SIZE / 2) {
+    roundWords = [];
+    setFeedback(`Für eine Runde brauchst du mindestens 12 offene und 12 geschlossene Wörter. Aktuell: ${openAvailable} offene und ${closedAvailable} geschlossene. Ergänze Wörter im Lehrermodus.`, "bad");
+    return false;
+  }
+  const previous = new Set(previousRoundWords ? previousRoundWords.split("|") : []);
+  function choose(kind) {
+    const all = shuffle(WORD_BANK.filter(w => w[1] === kind));
+    const fresh = all.filter(w => !previous.has(w[0]));
+    const pool = fresh.length >= ROUND_SIZE / 2 ? fresh : all;
+    return pool.slice(0, ROUND_SIZE / 2);
+  }
+  const chosen = [...choose("open"), ...choose("closed")];
+  previousRoundWords = chosen.map(w => w[0]).sort().join("|");
+  roundWords = shuffle(chosen);
+  return true;
+}
+function renderRound() {
+  score = 0; mistakes = 0; completed = 0; selectedWord = null;
+  updateStats();
+  el("wordPool").innerHTML = "";
+  el("openZone").innerHTML = "";
+  el("closedZone").innerHTML = "";
+  el("result").style.display = "none";
+
+  roundWords.forEach((item, index) => {
+    const [word, kind, tip] = item;
+    const button = document.createElement("button");
+    button.className = "word";
+    button.textContent = word;
+    button.draggable = true;
+    button.dataset.word = word;
+    button.dataset.kind = kind;
+    button.dataset.tip = tip;
+    button.type = "button";
+    button.setAttribute("aria-label", `${word} auswählen oder ziehen`);
+    button.addEventListener("dragstart", event => {
+      event.dataTransfer.setData("text/plain", word);
+      event.dataTransfer.effectAllowed = "move";
+    });
+    button.addEventListener("click", () => {
+      document.querySelectorAll("#wordPool .word").forEach(w => w.classList.remove("selected"));
+      selectedWord = word;
+      button.classList.add("selected");
+      setFeedback(`„${word}“ ausgewählt. Tippe jetzt auf das passende Silben-Feld.`);
+    });
+    el("wordPool").appendChild(button);
+  });
+  setFeedback("Eine neue Runde wartet! Otis drückt dir die Pfoten. 🐾");
+}
+function startNewRound() {
+  if (!makeRound()) return;
+  renderRound();
+  el("result").scrollIntoView({behavior:"smooth", block:"nearest"});
+}
+function placeWord(word, kind) {
+  const button = [...document.querySelectorAll("#wordPool .word")].find(b => b.dataset.word === word);
+  if (!button) return;
+  if (button.dataset.kind !== kind) {
+    mistakes++;
+    updateStats();
+    button.classList.remove("selected");
+    selectedWord = null;
+    setFeedback("Noch nicht ganz! 🤔 Sprich das Wort langsam und achte auf das Ende der ersten Silbe.", "bad");
+    return;
+  }
+  const chip = document.createElement("span");
+  chip.className = "word done";
+  chip.textContent = `✓ ${word}`;
+  chip.setAttribute("aria-label", `${word} richtig zugeordnet`);
+  el(kind === "open" ? "openZone" : "closedZone").appendChild(chip);
+  button.remove();
+  selectedWord = null;
+  score += 10;
+  completed++;
+  updateStats();
+  setFeedback(`Richtig! ⭐ ${button.dataset.tip}`, "good");
+
+  if (completed === ROUND_SIZE) {
+    el("resultText").textContent = `Du hast ${score} Punkte gesammelt und ${mistakes} ${mistakes === 1 ? "Fehler" : "Fehler"} gemacht. Otis ist mächtig stolz auf dich!`;
+    el("result").style.display = "block";
+    el("result").scrollIntoView({behavior:"smooth", block:"center"});
+  }
+}
+
+document.querySelectorAll(".drop").forEach(zone => {
+  zone.addEventListener("dragover", event => { event.preventDefault(); zone.classList.add("over"); });
+  zone.addEventListener("dragleave", () => zone.classList.remove("over"));
+  zone.addEventListener("drop", event => {
+    event.preventDefault();
+    zone.classList.remove("over");
+    placeWord(event.dataTransfer.getData("text/plain"), zone.dataset.kind);
+  });
+  zone.addEventListener("click", () => { if (selectedWord) placeWord(selectedWord, zone.dataset.kind); });
+  zone.addEventListener("keydown", event => {
+    if ((event.key === "Enter" || event.key === " ") && selectedWord) {
+      event.preventDefault(); placeWord(selectedWord, zone.dataset.kind);
+    }
+  });
+});
+el("hintBtn").addEventListener("click", () => {
+  if (!selectedWord) {
+    setFeedback("Tippe zuerst ein Wort an. Dann verrät dir Otis einen Hinweis.");
+    return;
+  }
+  const item = roundWords.find(w => w[0] === selectedWord);
+  setFeedback(`💡 Otis flüstert: ${item ? item[2] : "Sprich das Wort langsam."}`);
+});
+el("restartBtn").addEventListener("click", () => {
+  if (makeRound()) renderRound();
+});
+el("newRoundBtn").addEventListener("click", startNewRound);
+
+if (makeRound()) renderRound();
+else { updateStats(); el("wordPool").innerHTML = ""; }
+</script>
+</body>
+</html>
